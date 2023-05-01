@@ -18,13 +18,12 @@ client_scripts {
 
 server_scripts {
     'config.lua',
-    '@oxmysql/lib/MySQL.lua',
     'server/*.lua',
 }
 
 dependencies {
     -- qb-inventory or ox_inventory
-    -- qb-target
+    'qb-target',
     'dpemotes',
 	'ox_lib',
     'ox_inventory',
