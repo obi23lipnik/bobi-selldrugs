@@ -21,5 +21,6 @@ Must be UNDER your chose inventory resource, dpemotes, oxlib, qb-target and ox_m
 6. Restart server
 
 ## Ingame example
-(Client event 'bobi-selldrugs:client:StartSelling' added to radial menu)
-[![Video with example of ]({https://i.imgur.com/R2xgC4w.png})]({https://streamable.com/vi9nvg} "streamable.com/v19nvg")
+Client event 'bobi-selldrugs:client:StartSelling' added to radial menu
+
+[![Video with example of use]({https://i.imgur.com/R2xgC4w.png})]({https://streamable.com/vi9nvg} "streamable.com/v19nvg")
