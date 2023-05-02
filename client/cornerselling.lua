@@ -4,6 +4,12 @@ local usedEntities = {}
 local robbedByEntities = {}
 local occupied = false
 
+local cornersellingLabels = {}
+for k, _ in pairs(SellableDrugs) do
+    table.insert(cornersellingLabels, "Take back your " .. k)
+    table.insert(cornersellingLabels, "Try to sell " .. k)
+end
+
 local function getNpcPeds()
     local playerPeds = {}
     local pedPool = GetGamePool('CPed')
@@ -43,7 +49,7 @@ local function canSellDrugs()
 end
 
 local function successfulSell(entity, drugName, drugCount)
-    exports['qb-target']:RemoveTargetEntity(entity)
+    exports['qb-target']:RemoveTargetEntity(entity, cornersellingLabels)
     table.insert(usedEntities, entity)
     ClearPedTasksImmediately(entity)
     TaskTurnPedToFaceEntity(entity, PlayerPedId(), -1)
@@ -92,7 +98,7 @@ local function robbedOnSell(entity, drugName, drugCount)
     TriggerEvent('animations:client:EmoteCommandStart', {'bumbin'})
     FreezeEntityPosition(PlayerPedId(), true)
     TaskStartScenarioInPlace(entity, "WORLD_HUMAN_STAND_IMPATIENT_UPRIGHT", 0, false)
-    exports['qb-target']:RemoveTargetEntity(entity)
+    exports['qb-target']:RemoveTargetEntity(entity, cornersellingLabels)
     Wait(5000)
     ClearPedTasksImmediately(entity)
     local success = lib.callback.await('bobi-selldrugs:server:RemoveDrugs', false, drugName, drugCount)    
@@ -112,7 +118,7 @@ local function robbedOnSell(entity, drugName, drugCount)
             iconColor='#EBE134',
             position='top',
         })
-        exports['qb-target']:RemoveTargetEntity(entity)
+        exports['qb-target']:RemoveTargetEntity(entity, cornersellingLabels)
         table.insert(robbedByEntities, entity)
         exports['qb-target']:AddTargetEntity(entity, {
             options = {{
@@ -123,11 +129,10 @@ local function robbedOnSell(entity, drugName, drugCount)
                         position='top',
                     })
                     TriggerServerEvent('bobi-selldrugs:server:RetrieveDrugs', drugName, drugCount)
-                    exports['qb-target']:RemoveTargetEntity(entity)
+                    exports['qb-target']:RemoveTargetEntity(entity, cornersellingLabels)
                     robbedByEntities[entity] = nil
                     table.insert(usedEntities, entity)
                     -- take back the drugs
-    
                 end,
                 label = "Take back your " .. drugName,
             }},
@@ -176,7 +181,7 @@ local function startDrugSellingLoop()
             local buyers = getNpcPeds()
             for _, npcBuyer in pairs(buyers) do
                 if not lib.table.contains(robbedByEntities, npcBuyer) then
-                    exports['qb-target']:RemoveTargetEntity(npcBuyer)
+                    exports['qb-target']:RemoveTargetEntity(npcBuyer, cornersellingLabels)
                 end
             end
             local canSell, availableDrugs = canSellDrugs()
@@ -212,14 +217,13 @@ local function startDrugSellingLoop()
                                     successfulSell(entity, drugName, math.random(1, drugCount >= 15 and 15 or drugCount))
                                 end
                                 if SellableDrugs[drugName].odds.policeCallChance > math.random(1, 100) then
-                                    -- Do your police stuff here
-                                    -- exports['dispatch']:DrugSale()
-                                    -- exports['sd-aipolice']:ApplyWantedLevel(1)
+                                    exports['dispatch']:DrugSale()
+                                    exports['sd-aipolice']:ApplyWantedLevel(1)
                                 end
                             end
                             occupied = false
                         end,
-                        label = "Try to sell " .. drugName .. ". (" .. drugCount .. " left)"
+                        label = "Try to sell " .. drugName
                     })
                 end
             end
@@ -239,7 +243,7 @@ end
 RegisterNetEvent('bobi-selldrugs:client:StartSelling', function ()
     local buyers = getNpcPeds()
     for _, npcBuyer in pairs(buyers) do
-        exports['qb-target']:RemoveTargetEntity(npcBuyer)
+        exports['qb-target']:RemoveTargetEntity(npcBuyer, cornersellingLabels)
     end
     local canSell, _ = canSellDrugs()
     if not canSell then

@@ -47,3 +47,8 @@ elseif Config.inventoryResource == 'qb-inventory' then
 else
     print('Set inventory resource inside bobi-selldrugs/config.lua')
 end
+
+lib.callback.register('bobi-selldrugs:server:GetAllPeds', function (_)
+    return GetAllPeds()
+    
+end)
