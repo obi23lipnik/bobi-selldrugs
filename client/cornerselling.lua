@@ -4,10 +4,46 @@ local usedEntities = {}
 local robbedByEntities = {}
 local occupied = false
 
-local cornersellingLabels = {}
-for k, _ in pairs(SellableDrugs) do
-    table.insert(cornersellingLabels, "Take back your " .. k)
-    table.insert(cornersellingLabels, "Try to sell " .. k)
+local cornersellingTargetLabels = {}
+local cornersellingTargetOptionNames = {}
+
+local function addTargetEntity(entity, options, distance)
+    if Config.targetResource == 'qb-target' then
+        cornersellingTargetLabels = cornersellingTargetLabels or {}
+        exports['qb-target']:AddTargetEntity(entity, {
+            options = options,
+            distance = distance,
+        })
+        for _, option in pairs(options) do
+            cornersellingTargetLabels[option.label] = true
+        end
+    elseif Config.targetResource == 'ox_target' then
+        options.distance = distance
+        exports.ox_target:addLocalEntity(entity, options)
+        for _, option in pairs(options) do
+            cornersellingTargetLabels[option.name] = true
+        end
+    else
+        print('Config.targetResource is not set, target resource is required')
+    end
+end
+
+local function removeTargetEntity(entity)
+    if Config.targetResource == 'qb-target' then
+        local qbTargetLabels = {}
+        for label, _ in pairs(cornersellingTargetLabels) do
+            table.insert(qbTargetLabels, label)
+        end
+        exports['qb-target']:RemoveTargetEntity(entity, qbTargetLabels)
+    elseif Config.targetResource == 'ox_target' then
+        local oxTargetOptionNames = {}
+        for optionName, _ in pairs(cornersellingTargetOptionNames) do
+            table.insert(oxTargetOptionNames, optionName)
+        end
+        exports.ox_target:removeLocalEntity(entity, oxTargetOptionNames)
+    else
+        print('Config.targetResource is not set, target resource is required')
+    end
 end
 
 local function getNpcPeds()
@@ -49,7 +85,7 @@ local function canSellDrugs()
 end
 
 local function successfulSell(entity, drugName, drugCount)
-    exports['qb-target']:RemoveTargetEntity(entity, cornersellingLabels)
+    removeTargetEntity(entity)
     table.insert(usedEntities, entity)
     ClearPedTasksImmediately(entity)
     TaskTurnPedToFaceEntity(entity, PlayerPedId(), -1)
@@ -59,8 +95,9 @@ local function successfulSell(entity, drugName, drugCount)
     local moveto = GetEntityCoords(PlayerPedId())
     TaskGoStraightToCoord(ped, moveto.x, moveto.y, moveto.z, 15.0, -1, GetEntityHeading(PlayerPedId()) - 180.0, 0.0)
     Wait(1900)
-    TriggerEvent('animations:client:EmoteCommandStart', {'bumbin'})
     FreezeEntityPosition(PlayerPedId(), true)
+    ClearPedTasks(PlayerPedId())
+    TaskStartScenarioInPlace(PlayerPedId(), 'PROP_HUMAN_BUM_BIN', 0, true)
     TaskStartScenarioInPlace(entity, "WORLD_HUMAN_STAND_IMPATIENT_UPRIGHT", 0, false)
     Wait(5000)
     local success = lib.callback.await('bobi-selldrugs:server:RemoveDrugs', false, drugName, drugCount)
@@ -70,7 +107,7 @@ local function successfulSell(entity, drugName, drugCount)
             id='fishy_selling_drugs',
             title='Nice try, your actions were reported to the administrators',
             position='top',
-        })
+        })  -- Add your reporting stuff here to actually report
     else
         lib.notify({
             id='selling_drugs',
@@ -82,7 +119,7 @@ local function successfulSell(entity, drugName, drugCount)
     SetPedKeepTask(entity, false)
     SetEntityAsNoLongerNeeded(entity)
     ClearPedTasksImmediately(entity)
-    TriggerEvent('animations:client:EmoteCommandStart', {'c'})
+    ClearPedTasks(PlayerPedId())
     FreezeEntityPosition(PlayerPedId(), false)
 end
 
@@ -95,13 +132,14 @@ local function robbedOnSell(entity, drugName, drugCount)
     local moveto = GetEntityCoords(PlayerPedId())
     TaskGoStraightToCoord(ped, moveto.x, moveto.y, moveto.z, 15.0, -1, GetEntityHeading(PlayerPedId()) - 180.0, 0.0)
     Wait(1900)
-    TriggerEvent('animations:client:EmoteCommandStart', {'bumbin'})
     FreezeEntityPosition(PlayerPedId(), true)
+    ClearPedTasks(PlayerPedId())
+    TaskStartScenarioInPlace(PlayerPedId(), 'PROP_HUMAN_BUM_BIN', 0, true)
     TaskStartScenarioInPlace(entity, "WORLD_HUMAN_STAND_IMPATIENT_UPRIGHT", 0, false)
-    exports['qb-target']:RemoveTargetEntity(entity, cornersellingLabels)
+    removeTargetEntity(entity)
     Wait(5000)
     ClearPedTasksImmediately(entity)
-    local success = lib.callback.await('bobi-selldrugs:server:RemoveDrugs', false, drugName, drugCount)    
+    local success = lib.callback.await('bobi-selldrugs:server:RemoveDrugs', false, drugName, drugCount)
     Wait(200)
     if not success then
         -- player trying to do something fishy
@@ -118,10 +156,9 @@ local function robbedOnSell(entity, drugName, drugCount)
             iconColor='#EBE134',
             position='top',
         })
-        exports['qb-target']:RemoveTargetEntity(entity, cornersellingLabels)
+        removeTargetEntity(entity)
         table.insert(robbedByEntities, entity)
-        exports['qb-target']:AddTargetEntity(entity, {
-            options = {{
+        addTargetEntity(entity, {
                 action = function ()
                     lib.notify({
                         id='took_back',
@@ -129,19 +166,20 @@ local function robbedOnSell(entity, drugName, drugCount)
                         position='top',
                     })
                     TriggerServerEvent('bobi-selldrugs:server:RetrieveDrugs', drugName, drugCount)
-                    exports['qb-target']:RemoveTargetEntity(entity, cornersellingLabels)
+                    removeTargetEntity(entity)
                     robbedByEntities[entity] = nil
                     table.insert(usedEntities, entity)
                     -- take back the drugs
                 end,
                 label = "Take back your " .. drugName,
-            }},
-            distance = 4.0,
-        })
+                name = "take_back_drugs"
+            },
+            4.0
+        )
     end
     TaskSmartFleeCoord(entity, moveto.x, moveto.y, moveto.z, 1000.5, 60000, true, true)
     SetEntityAsNoLongerNeeded(entity)
-    TriggerEvent('animations:client:EmoteCommandStart', {'c'})
+    ClearPedTasks(PlayerPedId())
     FreezeEntityPosition(PlayerPedId(), false)
 end
 
@@ -167,7 +205,7 @@ local function denyOnSell(entity)
     TaskTurnPedToFaceEntity(entity, PlayerPedId(), -1)
     TaskLookAtEntity(entity, PlayerPedId(), -1, 2048, 3)
     Wait(2000)
-    TriggerEvent('animations:client:EmoteCommandStart', {'shrug'})
+    TaskPlayAnim(PlayerPedId(), "gestures@f@standing@casual", "gesture_shrug_hard", 2.0, 2.0, 1000, 16, 0, 0, 0)
     ClearPedTasksImmediately(entity)
 end
 
@@ -181,7 +219,7 @@ local function startDrugSellingLoop()
             local buyers = getNpcPeds()
             for _, npcBuyer in pairs(buyers) do
                 if not lib.table.contains(robbedByEntities, npcBuyer) then
-                    exports['qb-target']:RemoveTargetEntity(npcBuyer, cornersellingLabels)
+                    removeTargetEntity(npcBuyer)
                 end
             end
             local canSell, availableDrugs = canSellDrugs()
@@ -223,16 +261,14 @@ local function startDrugSellingLoop()
                             end
                             occupied = false
                         end,
-                        label = "Try to sell " .. drugName
+                        label = "Try to sell " .. drugName,
+                        name = "sell_option_" .. drugName,
                     })
                 end
             end
             for _, npcBuyer in pairs(buyers) do
                 if not lib.table.contains(usedEntities, npcBuyer) then
-                    exports['qb-target']:AddTargetEntity(npcBuyer, {
-                        options = sellOptions,
-                        distance = 4.0,
-                    })
+                    addTargetEntity(npcBuyer, sellOptions, 4.0)
                 end
             end
             Wait(5000)
@@ -243,7 +279,7 @@ end
 RegisterNetEvent('bobi-selldrugs:client:StartSelling', function ()
     local buyers = getNpcPeds()
     for _, npcBuyer in pairs(buyers) do
-        exports['qb-target']:RemoveTargetEntity(npcBuyer, cornersellingLabels)
+        removeTargetEntity(npcBuyer)
     end
     local canSell, _ = canSellDrugs()
     if not canSell then
