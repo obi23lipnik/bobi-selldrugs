@@ -7,6 +7,22 @@ local occupied = false
 local cornersellingTargetLabels = {}
 local cornersellingTargetOptionNames = {}
 
+local function getDrugLabel(drugName)
+    if Config.inventoryResource == 'ox_inventory' then
+        local itemLabels = {}
+        for item, data in pairs(exports.ox_inventory:Items()) do
+            itemLabels[data.name] = data.label
+        end
+        return itemLabels[drugName]
+
+    elseif Config.inventoryResource == 'qb-invenotry' then
+        local QBCore = exports['qb-core']:GetCoreObject()
+        return QBCore.Shared.Items[drugName]['label']
+    else
+        print('Config.inventoryResource is not set, an inventory resource is required')
+    end
+end
+
 local function addTargetEntity(entity, options)
     if Config.targetResource == 'qb-target' then
         cornersellingTargetLabels = cornersellingTargetLabels or {}
@@ -141,6 +157,7 @@ local function robbedOnSell(entity, drugName, drugCount)
     ClearPedTasksImmediately(entity)
     local success = lib.callback.await('bobi-selldrugs:server:RemoveDrugs', false, drugName, drugCount)
     Wait(200)
+    local drugLabel = getDrugLabel(drugName)
     if not success then
         -- player trying to do something fishy
         lib.notify({
@@ -151,7 +168,7 @@ local function robbedOnSell(entity, drugName, drugCount)
     else
         lib.notify({
             id='robbed',
-            title='HEY! This fucker didn\'t pay for the '..drugName..'!',
+            title='HEY! This fucker didn\'t pay for the '..drugLabel..'!',
             icon='warning',
             iconColor='#EBE134',
             position='top',
@@ -165,7 +182,7 @@ local function robbedOnSell(entity, drugName, drugCount)
                 action = function ()
                     lib.notify({
                         id='took_back',
-                        title='Took back '..drugCount.. 'x '..drugName,
+                        title='Took back '..drugCount.. 'x '..drugLabel,
                         position='top',
                     })
                     TriggerServerEvent('bobi-selldrugs:server:RetrieveDrugs', drugName, drugCount)
@@ -174,7 +191,7 @@ local function robbedOnSell(entity, drugName, drugCount)
                     table.insert(usedEntities, entity)
                     -- take back the drugs
                 end,
-                label = "Take back your " .. drugName,
+                label = "Take back your " .. drugLabel,
                 name = "take_back_drugs"
             }}
         )
@@ -231,6 +248,7 @@ local function startDrugSellingLoop()
             local sellOptions = {}
             for drugName, drugCount in pairs(availableDrugs) do
                 if drugCount >= 1 then
+                    local drugLabel = getDrugLabel(drugName)
                     table.insert(sellOptions, {
                         canInteract = function(interactEntity, distance, _)
                             if IsEntityDead(interactEntity) then
@@ -273,7 +291,7 @@ local function startDrugSellingLoop()
                             end
                             occupied = false
                         end,
-                        label = "Try to sell " .. drugName,
+                        label = "Try to sell " .. drugLabel,
                         name = "sell_option_" .. drugName,
                     })
                 end
