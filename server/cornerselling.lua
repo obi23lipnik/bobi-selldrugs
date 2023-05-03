@@ -30,7 +30,9 @@ elseif Config.inventoryResource == 'qb-inventory' then
             local drugsCount = {}
             for _, drugName in pairs(sellableDrugNames) do
                 local item = Player.Functions.GetItemByName(drugName)
-                drugsCount[drugName] = item.amount
+                if item then
+                    drugsCount[drugName] = item.amount
+                end
             end
             return drugsCount
         end)
@@ -50,5 +52,4 @@ end
 
 lib.callback.register('bobi-selldrugs:server:GetAllPeds', function (_)
     return GetAllPeds()
-    
 end)

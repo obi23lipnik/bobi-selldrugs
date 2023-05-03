@@ -17,7 +17,8 @@ local function addTargetEntity(entity, options)
             cornersellingTargetLabels[option.label] = true
         end
     elseif Config.targetResource == 'ox_target' then
-        exports.ox_target:addLocalEntity(entity, options)
+        local netId = NetworkGetNetworkIdFromEntity(entity)
+        exports.ox_target:addEntity(netId, options)
         for _, option in pairs(options) do
             cornersellingTargetOptionNames[option.name] = true
         end
@@ -34,11 +35,12 @@ local function removeTargetEntity(entity)
         end
         exports['qb-target']:RemoveTargetEntity(entity, qbTargetLabels)
     elseif Config.targetResource == 'ox_target' then
+        local netId = NetworkGetNetworkIdFromEntity(entity)
         local oxTargetOptionNames = {}
         for optionName, _ in pairs(cornersellingTargetOptionNames) do
             table.insert(oxTargetOptionNames, optionName)
         end
-        exports.ox_target:removeLocalEntity(entity, oxTargetOptionNames)
+        exports.ox_target:removeEntity(netId, oxTargetOptionNames)
     else
         print('Config.targetResource is not set, target resource is required')
     end
@@ -264,8 +266,9 @@ local function startDrugSellingLoop()
                                     successfulSell(entity, drugName, math.random(1, drugCount >= 15 and 15 or drugCount))
                                 end
                                 if SellableDrugs[drugName].odds.policeCallChance > math.random(1, 100) then
-                                    exports['dispatch']:DrugSale()
-                                    exports['sd-aipolice']:ApplyWantedLevel(1)
+                                    -- Add your call cops scripts here
+                                    --  exports['dispatch']:DrugSale()
+                                    --  exports['sd-aipolice']:ApplyWantedLevel(1)
                                 end
                             end
                             occupied = false
