@@ -7,21 +7,19 @@ local occupied = false
 local cornersellingTargetLabels = {}
 local cornersellingTargetOptionNames = {}
 
-local function addTargetEntity(entity, options, distance)
+local function addTargetEntity(entity, options)
     if Config.targetResource == 'qb-target' then
         cornersellingTargetLabels = cornersellingTargetLabels or {}
         exports['qb-target']:AddTargetEntity(entity, {
             options = options,
-            distance = distance,
         })
         for _, option in pairs(options) do
             cornersellingTargetLabels[option.label] = true
         end
     elseif Config.targetResource == 'ox_target' then
-        options.distance = distance
         exports.ox_target:addLocalEntity(entity, options)
         for _, option in pairs(options) do
-            cornersellingTargetLabels[option.name] = true
+            cornersellingTargetOptionNames[option.name] = true
         end
     else
         print('Config.targetResource is not set, target resource is required')
@@ -158,7 +156,7 @@ local function robbedOnSell(entity, drugName, drugCount)
         })
         removeTargetEntity(entity)
         table.insert(robbedByEntities, entity)
-        addTargetEntity(entity, {
+        addTargetEntity(entity, {{
                 action = function ()
                     lib.notify({
                         id='took_back',
@@ -173,8 +171,7 @@ local function robbedOnSell(entity, drugName, drugCount)
                 end,
                 label = "Take back your " .. drugName,
                 name = "take_back_drugs"
-            },
-            4.0
+            }}
         )
     end
     TaskSmartFleeCoord(entity, moveto.x, moveto.y, moveto.z, 1000.5, 60000, true, true)
@@ -230,6 +227,15 @@ local function startDrugSellingLoop()
             for drugName, drugCount in pairs(availableDrugs) do
                 if drugCount >= 1 then
                     table.insert(sellOptions, {
+                        canInteract = function(interactEntity, distance, _)
+                            if IsEntityDead(interactEntity) then
+                                return false
+                            end
+                            if distance >= 4.0 then
+                                return false
+                            end
+                            return true
+                        end,
                         action = function (entity)
                             if occupied then
                                 lib.notify({
@@ -268,7 +274,7 @@ local function startDrugSellingLoop()
             end
             for _, npcBuyer in pairs(buyers) do
                 if not lib.table.contains(usedEntities, npcBuyer) then
-                    addTargetEntity(npcBuyer, sellOptions, 4.0)
+                    addTargetEntity(npcBuyer, sellOptions)
                 end
             end
             Wait(5000)
