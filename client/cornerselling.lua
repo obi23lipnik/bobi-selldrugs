@@ -157,6 +157,9 @@ local function robbedOnSell(entity, drugName, drugCount)
         removeTargetEntity(entity)
         table.insert(robbedByEntities, entity)
         addTargetEntity(entity, {{
+                canInteract = function(_, distance, _)
+                    return distance <= 4.0
+                end,
                 action = function ()
                     lib.notify({
                         id='took_back',
