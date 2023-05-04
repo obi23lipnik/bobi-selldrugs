@@ -15,7 +15,7 @@ local function getDrugLabel(drugName)
         end
         return itemLabels[drugName]
 
-    elseif Config.inventoryResource == 'qb-invenotry' then
+    elseif Config.inventoryResource == 'qb-inventory' then
         local QBCore = exports['qb-core']:GetCoreObject()
         return QBCore.Shared.Items[drugName]['label']
     else
