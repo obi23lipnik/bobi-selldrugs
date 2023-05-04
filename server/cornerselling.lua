@@ -50,6 +50,10 @@ else
     print('Set inventory resource inside bobi-selldrugs/config.lua')
 end
 
-lib.callback.register('bobi-selldrugs:server:GetAllPeds', function (_)
-    return GetAllPeds()
-end)
+RegisterCommand("selldrugs", function(source, _, _)
+    if (source > 0) then
+        TriggerClientEvent('bobi-selldrugs:client:StartSelling', source)
+    else
+        print("This command can only be used by players")
+    end
+end, false)

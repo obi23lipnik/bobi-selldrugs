@@ -2,7 +2,7 @@ fx_version 'cerulean'
 game 'gta5'
 
 author 'bobimane'
-version '0.4'
+version '0.5'
 name 'bobi-selldrugs'
 description 'Simple drugs selling script'
 lua54 'no'

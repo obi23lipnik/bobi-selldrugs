@@ -335,11 +335,3 @@ RegisterNetEvent('bobi-selldrugs:client:StartSelling', function ()
         lib.hideTextUI()
     end
 end)
-
-RegisterNetEvent('bobi-selldrugs:client:SellToCustomer', function (drugName)
-    lib.notify({
-        id='selling_drugs',
-        title='You successfully sold some '..drugName..'!',
-        position='top',
-    })
-end)
