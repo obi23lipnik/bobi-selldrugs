@@ -15,7 +15,8 @@ GTAV FiveM resource for drugs corner selling (QBCore &amp; ox_inventory support)
 `git clone git@github.com:obi23lipnik/bobi-selldrugs.git` 
 2. Update bobi-methlab/config.lua
 - Set your inventory resouce by updating Config.inventoryResource (options are ox_inventory and qb-inventory)
-3. Add a call to client event 'bobi-selldrugs:client:StartSelling' to the action that puts you into the drug selling mode
+3. (optional)Add a call to client event 'bobi-selldrugs:client:StartSelling' to the action that puts you into the drug selling mode
+- Alternatively you can use the /selldrugs command to turn the selling on and off
 4. (optional) Update obi-selldrugs/data/drugs.lua with your chosen sellable drugs and event odds
 5. Update your server.cfg to ensure/start resource bobi-selldrugs
 - `ensure bobi-selldrugs` 
