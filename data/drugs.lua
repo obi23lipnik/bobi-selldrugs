@@ -3,13 +3,15 @@ local regularDrugOdds = {
     robberyChance = 5,
     aggroChance = 5,
     sellChance = 60,
+    sellAmountRange = {1, 15},
 }
 
 local hardDrugOdds = {
     policeCallChance = 15,
     robberyChance = 15,
-    aggroChance = 10,
+    aggroChance = 15,
     sellChance = 35,
+    sellAmountRange = {1, 15},
 }
 
 local superHardDrugOdds = {
@@ -17,6 +19,7 @@ local superHardDrugOdds = {
     robberyChance = 35,
     aggroChance = 35,
     sellChance = 15,
+    sellAmountRange = {1, 15},
 }
 
 SellableDrugs = {

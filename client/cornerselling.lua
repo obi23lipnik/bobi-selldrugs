@@ -33,8 +33,7 @@ local function addTargetEntity(entity, options)
             cornersellingTargetLabels[option.label] = true
         end
     elseif Config.targetResource == 'ox_target' then
-        local netId = NetworkGetNetworkIdFromEntity(entity)
-        exports.ox_target:addEntity(netId, options)
+        exports.ox_target:addLocalEntity(entity, options)
         for _, option in pairs(options) do
             cornersellingTargetOptionNames[option.name] = true
         end
@@ -51,12 +50,11 @@ local function removeTargetEntity(entity)
         end
         exports['qb-target']:RemoveTargetEntity(entity, qbTargetLabels)
     elseif Config.targetResource == 'ox_target' then
-        local netId = NetworkGetNetworkIdFromEntity(entity)
         local oxTargetOptionNames = {}
         for optionName, _ in pairs(cornersellingTargetOptionNames) do
             table.insert(oxTargetOptionNames, optionName)
         end
-        exports.ox_target:removeEntity(netId, oxTargetOptionNames)
+        exports.ox_target:removeLocalEntity(entity, oxTargetOptionNames)
     else
         print('Config.targetResource is not set, target resource is required')
     end
@@ -98,6 +96,19 @@ local function canSellDrugs()
         end
     end
     return canSell, availableDrugs
+end
+
+local function takeBackDrugs (theEntity, drugCount, drugName, drugLabel)
+    lib.notify({
+        id='took_back',
+        title='Took back '..drugCount.. 'x '..drugLabel,
+        position='top',
+    })
+    TriggerServerEvent('bobi-selldrugs:server:RetrieveDrugs', drugName, drugCount)
+    removeTargetEntity(theEntity)
+    robbedByEntities[theEntity] = nil
+    table.insert(usedEntities, theEntity)
+    -- take back the drugs
 end
 
 local function successfulSell(entity, drugName, drugCount)
@@ -179,17 +190,11 @@ local function robbedOnSell(entity, drugName, drugCount)
                 canInteract = function(_, distance, _)
                     return distance <= 4.0
                 end,
-                action = function ()
-                    lib.notify({
-                        id='took_back',
-                        title='Took back '..drugCount.. 'x '..drugLabel,
-                        position='top',
-                    })
-                    TriggerServerEvent('bobi-selldrugs:server:RetrieveDrugs', drugName, drugCount)
-                    removeTargetEntity(entity)
-                    robbedByEntities[entity] = nil
-                    table.insert(usedEntities, entity)
-                    -- take back the drugs
+                action = function(theEntity)
+                    takeBackDrugs(theEntity, drugCount, drugName, drugLabel)
+                end,
+                onSelect = function(data)
+                    takeBackDrugs(data.entity, drugCount, drugName, drugLabel)
                 end,
                 label = "Take back your " .. drugLabel,
                 name = "take_back_drugs"
@@ -228,6 +233,38 @@ local function denyOnSell(entity)
     ClearPedTasksImmediately(entity)
 end
 
+local function attemptSellDrugs (entity, drugName, drugCount)
+    if occupied then
+        lib.notify({
+            id='already_selling',
+            title='You are busy with a client already!',
+            position='top',
+            icon='ban',
+            iconColor='#C53030'
+        })
+        return
+    end
+    occupied = true
+    if math.random(1, 100) > SellableDrugs[drugName].odds.sellChance then
+        if math.random(1, 100) < SellableDrugs[drugName].odds.aggroChance then
+            aggroOnSell(entity)
+        else
+            denyOnSell(entity)
+        end
+    else
+        local sellAmount = math.random(drugCount >= SellableDrugs[drugName].odds.sellAmountRange[1] and SellableDrugs[drugName].odds.sellAmountRange[1] or drugCount, drugCount >= SellableDrugs[drugName].odds.sellAmountRange[2] and SellableDrugs[drugName].odds.sellAmountRange[2] or drugCount)
+        if math.random(1, 100) < SellableDrugs[drugName].odds.robberyChance then
+            robbedOnSell(entity, drugName, sellAmount)
+        else
+            successfulSell(entity, drugName, sellAmount)
+        end
+        if SellableDrugs[drugName].odds.policeCallChance > math.random(1, 100) then
+            Config.policeCallClientFunction()
+        end
+    end
+    occupied = false
+end
+
 local function startDrugSellingLoop()
     CreateThread(function ()
         while true do
@@ -259,37 +296,11 @@ local function startDrugSellingLoop()
                             end
                             return true
                         end,
-                        action = function (entity)
-                            if occupied then
-                                lib.notify({
-                                    id='already_selling',
-                                    title='You are busy with a client already!',
-                                    position='top',
-                                    icon='ban',
-                                    iconColor='#C53030'
-                                })
-                                return
-                            end
-                            occupied = true
-                            if math.random(1, 100) > SellableDrugs[drugName].odds.sellChance then
-                                if math.random(1, 100) < SellableDrugs[drugName].odds.aggroChance then
-                                    aggroOnSell(entity)
-                                else
-                                    denyOnSell(entity)
-                                end
-                            else
-                                if math.random(1, 100) < SellableDrugs[drugName].odds.robberyChance then
-                                    robbedOnSell(entity, drugName, math.random(1, drugCount >= 15 and 15 or drugCount))
-                                else
-                                    successfulSell(entity, drugName, math.random(1, drugCount >= 15 and 15 or drugCount))
-                                end
-                                if SellableDrugs[drugName].odds.policeCallChance > math.random(1, 100) then
-                                    -- Add your call cops scripts here
-                                    --  exports['dispatch']:DrugSale()
-                                    --  exports['sd-aipolice']:ApplyWantedLevel(1)
-                                end
-                            end
-                            occupied = false
+                        action = function(entity)
+                            attemptSellDrugs(entity, drugName, drugCount)
+                        end,
+                        onSelect = function(data)
+                            attemptSellDrugs(data.entity, drugName, drugCount)
                         end,
                         label = "Try to sell " .. drugLabel,
                         name = "sell_option_" .. drugName,
