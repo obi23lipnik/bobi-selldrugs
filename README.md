@@ -9,6 +9,7 @@ GTAV FiveM resource for drugs corner selling (QBCore &amp; ox_inventory support)
 * one of:
     * ox_inventory: [https://github.com/overextended/ox_inventory]
     * qb-inventory (qbcore): [https://github.com/qbcore-framework]
+    * ESX (esx_core) **(experimental support)**: [https://github.com/esx-framework/esx-legacy]
 
 ## Installation
 1. Clone git repository into your /resources folder 
