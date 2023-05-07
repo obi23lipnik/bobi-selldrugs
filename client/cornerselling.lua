@@ -10,7 +10,7 @@ local cornersellingTargetOptionNames = {}
 local function getDrugLabel(drugName)
     if Config.inventoryResource == 'ox_inventory' then
         local itemLabels = {}
-        for item, data in pairs(exports.ox_inventory:Items()) do
+        for _, data in pairs(exports.ox_inventory:Items()) do
             itemLabels[data.name] = data.label
         end
         return itemLabels[drugName]
@@ -18,6 +18,8 @@ local function getDrugLabel(drugName)
     elseif Config.inventoryResource == 'qb-inventory' then
         local QBCore = exports['qb-core']:GetCoreObject()
         return QBCore.Shared.Items[drugName]['label']
+    elseif Config.inventoryResource == 'ESX' then
+        return lib.callback.await('bobi-selldrugs:server:GetDrugLabel', false, drugName)
     else
         print('Config.inventoryResource is not set, an inventory resource is required')
     end
@@ -90,12 +92,15 @@ local function canSellDrugs()
         table.insert(sellableDrugNames, drugName)
     end
     availableDrugs = lib.callback.await('bobi-selldrugs:server:GetAvailableDrugs', false, sellableDrugNames)
+    while not availableDrugs do
+        availableDrugs = lib.callback.await('bobi-selldrugs:server:GetAvailableDrugs', false, sellableDrugNames)
+    end
     for _, drugsCount in pairs(availableDrugs) do
         if drugsCount ~= 0 then
             canSell = true
         end
     end
-    return canSell, availableDrugs
+    return Config.sellingOnByDefault and true or canSell, availableDrugs
 end
 
 local function takeBackDrugs (theEntity, drugCount, drugName, drugLabel)
@@ -316,8 +321,7 @@ local function startDrugSellingLoop()
         end
     end)
 end
-
-RegisterNetEvent('bobi-selldrugs:client:StartSelling', function ()
+local function startSelling()
     local buyers = getNpcPeds()
     for _, npcBuyer in pairs(buyers) do
         removeTargetEntity(npcBuyer)
@@ -336,13 +340,25 @@ RegisterNetEvent('bobi-selldrugs:client:StartSelling', function ()
     end
     selling = not selling
     if selling then
-        lib.showTextUI('Selling Drugs', {
-            position = 'left-center',
-            icon = 'cannabis',
-            iconColor = '34EB37'
-        })
+        if not Config.sellingOnByDefault then
+            lib.showTextUI('Selling Drugs', {
+                position = 'left-center',
+                icon = 'cannabis',
+                iconColor = '34EB37'
+            })
+        end
         startDrugSellingLoop()
     else
         lib.hideTextUI()
     end
+end
+
+RegisterNetEvent('bobi-selldrugs:client:StartSelling', function ()
+    startSelling()
 end)
+
+if Config.sellingOnByDefault then
+    AddEventHandler('playerSpawned', function()
+        startSelling()
+    end)
+end
