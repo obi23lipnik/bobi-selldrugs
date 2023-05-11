@@ -1,5 +1,5 @@
 # bobi-selldrugs
-GTAV FiveM resource for drugs corner selling (QBCore &amp; ox_inventory support)
+GTAV FiveM resource for drugs corner selling (QBCore, ESX &amp; standalone+ox_inventory support)
 
 ## Dependencies
 * ox_lib: [https://github.com/overextended/ox_lib]
