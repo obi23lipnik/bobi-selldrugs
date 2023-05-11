@@ -18,6 +18,7 @@ GTAV FiveM resource for drugs corner selling (QBCore &amp; ox_inventory support)
 - Set your inventory resouce by updating Config.inventoryResource (options are ox_inventory and qb-inventory)
 3. (optional)Add a call to client event 'bobi-selldrugs:client:StartSelling' to the action that puts you into the drug selling mode
 - Alternatively you can use the /selldrugs command to turn the selling on and off
+- (Experimental) You can also set `Config.sellingOnByDefault = true` inside `config.lua` which will make selling mode be on by default on player spawn
 4. (optional) Update obi-selldrugs/data/drugs.lua with your chosen sellable drugs and event odds
 5. Update your server.cfg to ensure/start resource bobi-selldrugs
 - `ensure bobi-selldrugs` 
@@ -25,6 +26,5 @@ GTAV FiveM resource for drugs corner selling (QBCore &amp; ox_inventory support)
 6. Restart server
 
 ## Ingame example
-Client event 'bobi-selldrugs:client:StartSelling' added to radial menu
-
-[![Video with example of use](https://i.imgur.com/R2xgC4w.png)](https://streamable.com/vi9nvg)
+ (using client event 'bobi-selldrugs:client:StartSelling' added to radial menu)
+[![Video with example of use](https://i.imgur.com/hScXUxi.png)](https://streamable.com/fhb407)
