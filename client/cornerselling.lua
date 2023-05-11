@@ -7,6 +7,8 @@ local occupied = false
 local cornersellingTargetLabels = {}
 local cornersellingTargetOptionNames = {}
 
+local forbiddenEntities = {}
+
 local function getDrugLabel(drugName)
     if Config.inventoryResource == 'ox_inventory' then
         local itemLabels = {}
@@ -26,6 +28,12 @@ local function getDrugLabel(drugName)
 end
 
 local function addTargetEntity(entity, options)
+    if not next(options) then return end
+    if lib.table.contains(forbiddenEntities, entity) then return end
+    if lib.table.contains(Config.forbiddenModels, GetEntityModel(entity)) then return end
+    if IsEntityAMissionEntity(entity) then return end
+    if IsEntityAnObject(entity) then return end
+    if not IsEntityAPed(entity) then return end
     if Config.targetResource == 'qb-target' then
         cornersellingTargetLabels = cornersellingTargetLabels or {}
         exports['qb-target']:AddTargetEntity(entity, {
@@ -50,12 +58,14 @@ local function removeTargetEntity(entity)
         for label, _ in pairs(cornersellingTargetLabels) do
             table.insert(qbTargetLabels, label)
         end
+        if not next(qbTargetLabels) then return end
         exports['qb-target']:RemoveTargetEntity(entity, qbTargetLabels)
     elseif Config.targetResource == 'ox_target' then
         local oxTargetOptionNames = {}
         for optionName, _ in pairs(cornersellingTargetOptionNames) do
             table.insert(oxTargetOptionNames, optionName)
         end
+        if not next(oxTargetOptionNames) then return end
         exports.ox_target:removeLocalEntity(entity, oxTargetOptionNames)
     else
         print('Config.targetResource is not set, target resource is required')
@@ -119,7 +129,7 @@ end
 local function successfulSell(entity, drugName, drugCount)
     removeTargetEntity(entity)
     table.insert(usedEntities, entity)
-    ClearPedTasksImmediately(entity)
+    ClearPedTasks(entity)
     TaskTurnPedToFaceEntity(entity, PlayerPedId(), -1)
     TaskLookAtEntity(entity, PlayerPedId(), -1, 2048, 3)
     Wait(1000)
@@ -144,19 +154,21 @@ local function successfulSell(entity, drugName, drugCount)
         lib.notify({
             id='selling_drugs',
             title='You sold some '..drugName..'!',
+            icon='check',
+            iconColor='#00FF00',
             position='top',
         })
         TriggerServerEvent('bobi-selldrugs:server:PayMoneyForDrugs', drugName, drugCount)
     end
     SetPedKeepTask(entity, false)
     SetEntityAsNoLongerNeeded(entity)
-    ClearPedTasksImmediately(entity)
+    ClearPedTasks(entity)
     ClearPedTasks(PlayerPedId())
     FreezeEntityPosition(PlayerPedId(), false)
 end
 
 local function robbedOnSell(entity, drugName, drugCount)
-    ClearPedTasksImmediately(entity)
+    ClearPedTasks(entity)
     TaskTurnPedToFaceEntity(entity, PlayerPedId(), -1)
     TaskLookAtEntity(entity, PlayerPedId(), -1, 2048, 3)
     Wait(1000)
@@ -214,7 +226,7 @@ end
 
 local function aggroOnSell(entity)
     table.insert(usedEntities, entity)
-    ClearPedTasksImmediately(entity)
+    ClearPedTasks(entity)
     TaskTurnPedToFaceEntity(entity, PlayerPedId(), -1)
     TaskLookAtEntity(entity, PlayerPedId(), -1, 2048, 3)
     Wait(1000)
@@ -222,6 +234,13 @@ local function aggroOnSell(entity)
     local moveto = GetEntityCoords(PlayerPedId())
     TaskGoStraightToCoord(ped, moveto.x, moveto.y, moveto.z, 15.0, -1, GetEntityHeading(PlayerPedId()) - 180.0, 0.0)
     Wait(1900)
+    lib.notify({
+        id='aggro',
+        title='Oh shit, this idiot got really angry at you!',
+        icon='warning',
+        iconColor='#EBE134',
+        position='top',
+    })
     SetPedCombatAttributes(entity, 5, true)
     SetPedCombatAttributes(entity, 46, true)
     TaskCombatPed(entity, PlayerPedId(), 0, 16)
@@ -230,12 +249,18 @@ end
 local function denyOnSell(entity)
     table.insert(usedEntities, entity)
     table.insert(usedEntities, entity)
-    ClearPedTasksImmediately(entity)
+    ClearPedTasks(entity)
     TaskTurnPedToFaceEntity(entity, PlayerPedId(), -1)
     TaskLookAtEntity(entity, PlayerPedId(), -1, 2048, 3)
     Wait(2000)
+    lib.notify({
+        id='denied',
+        title='I guess they don\'t like having fun..',
+        icon='question',
+        position='top',
+    })
     TaskPlayAnim(PlayerPedId(), "gestures@f@standing@casual", "gesture_shrug_hard", 2.0, 2.0, 1000, 16, 0, 0, 0)
-    ClearPedTasksImmediately(entity)
+    ClearPedTasks(entity)
 end
 
 local function attemptSellDrugs (entity, drugName, drugCount)
@@ -352,10 +377,18 @@ local function startSelling()
         lib.hideTextUI()
     end
 end
+local function addForbiddenEntity (entity)
+    table.insert(forbiddenEntities, entity)
+end
 
 RegisterNetEvent('bobi-selldrugs:client:StartSelling', function ()
     startSelling()
 end)
+
+RegisterNetEvent('bobi-selldrugs:client:AddForbiddenEntity', function (entity)
+    addForbiddenEntity(entity)
+end)
+exports('AddForbiddenEntity', addForbiddenEntity)
 
 if Config.sellingOnByDefault then
     AddEventHandler('playerSpawned', function()
